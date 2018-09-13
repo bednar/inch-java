@@ -18,9 +18,8 @@ public class QueryComparator {
 
     public static void main(String[] args) throws InterruptedException, IOException {
 
-        String singleQuery = "...";
-
-        String multipleQuery = "...";
+        String singleQuery = args[0];
+        String multipleQuery = args[1];
 
         QueryComparator queryComparator = new QueryComparator();
         queryComparator.influxDB = Utils.connectToInfluxDB();
