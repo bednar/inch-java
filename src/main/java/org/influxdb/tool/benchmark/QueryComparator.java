@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,8 +31,7 @@ public class QueryComparator {
     public static void main(String[] args) throws InterruptedException, IOException {
 
         InputStream resourceAsStream = Properties.class.getResourceAsStream("/META-INF/maven/org.influxdb/influxdb-java/pom.properties");
-        if (resourceAsStream != null)
-        {
+        if (resourceAsStream != null) {
             Properties properties = new Properties();
             properties.load(resourceAsStream);
 
@@ -93,11 +93,10 @@ public class QueryComparator {
 
         InfluxDB influxDB = Utils.connectToInfluxDB(format);
 
-
         String leftAlignFormat = "     | %-35s | %-8d | %-9d |%n";
 
-        System.out.println();
         if (!hide) {
+            System.out.println();
             System.out.println("Query: " + statement);
             System.out.println("Format: " + format);
             System.out.println("Repeat: " + repeat);
@@ -122,28 +121,40 @@ public class QueryComparator {
                     } else {
                         CountDownLatch countDownLatch = new CountDownLatch(1);
 
-//                        influxDB.query(query, chunking,
-//                                new java.util.function.BiConsumer<InfluxDB.Cancellable, QueryResult>() {
-//                                    @Override
-//                                    public void accept(InfluxDB.Cancellable cancellable, QueryResult queryResult) {
-//
-//                                    }
-//                                }, new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        countDownLatch.countDown();
-//                                    }
-//                                });
-
                         influxDB.query(query, chunking,
-                                new java.util.function.Consumer<QueryResult>() {
+                                new java.util.function.BiConsumer<InfluxDB.Cancellable, QueryResult>() {
                                     @Override
-                                    public void accept(QueryResult queryResult) {
-                                        if (queryResult.getError() != null && queryResult.getError().equals("DONE")) {
-                                            countDownLatch.countDown();
-                                        }
+                                    public void accept(InfluxDB.Cancellable cancellable, QueryResult queryResult) {
+
+                                    }
+                                }, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        countDownLatch.countDown();
                                     }
                                 });
+
+//                        LongAdder adder = new LongAdder();
+//                        boolean isMessagePack = InfluxDB.ResponseFormat.MSGPACK.equals(format);
+//                        influxDB.query(query, chunking,
+//                                new java.util.function.Consumer<QueryResult>() {
+//                                    @Override
+//                                    public void accept(QueryResult queryResult) {
+//
+//                                        // JSON END
+//                                        if (queryResult.getError() != null && queryResult.getError().equals("DONE")) {
+//                                            countDownLatch.countDown();
+//                                        } else {
+//                                            List<List<Object>> values = queryResult.getResults().get(0).getSeries().get(0).getValues();
+//                                            adder.add(values.size());
+//
+//                                            // MessagePack end
+//                                            if (isMessagePack && adder.longValue() == limit) {
+//                                                countDownLatch.countDown();
+//                                            }
+//                                        }
+//                                    }
+//                                });
                         countDownLatch.await(5, TimeUnit.SECONDS);
                     }
                 }
