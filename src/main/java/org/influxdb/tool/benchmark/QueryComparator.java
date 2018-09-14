@@ -101,6 +101,7 @@ public class QueryComparator {
             System.out.println("Query: " + statement);
             System.out.println("Format: " + format);
             System.out.println("Repeat: " + repeat);
+            System.out.println("Chunking: " + chunking);
         }
         System.out.println();
         System.out.format("     +-------------------------------------+----------+-----------+%n");
