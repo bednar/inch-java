@@ -1,8 +1,10 @@
 package org.influxdb.tool.benchmark;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -27,12 +29,23 @@ public class QueryComparator {
 
     public static void main(String[] args) throws InterruptedException, IOException {
 
+        InputStream resourceAsStream = Properties.class.getResourceAsStream("/META-INF/maven/org.influxdb/influxdb-java/pom.properties");
+        if (resourceAsStream != null)
+        {
+            Properties properties = new Properties();
+            properties.load(resourceAsStream);
+
+            String property = properties.getProperty("version", "unknown");
+            System.out.println("Client version: " + property);
+        }
+
         String statement = null;
         String database = null;
         List<Integer> limits = new ArrayList<>();
         InfluxDB.ResponseFormat format = InfluxDB.ResponseFormat.JSON;
         int chunking = -1;
         int repeat = 1;
+        boolean hide = false;
 
         // parse command line
         {
@@ -45,6 +58,7 @@ public class QueryComparator {
             options.addOption(Option.builder("format").desc("InfluxDB response format (default \"JSON\"; JSON, MSGPACK)").hasArg().build());
             options.addOption(Option.builder("chunking").desc("Size chunk - int (default 100, -1 to disable)").hasArg().build());
             options.addOption(Option.builder("repeat").desc("Repeat query - int (default 1)").hasArg().build());
+            options.addOption(Option.builder("hide").desc("Hide query info - bool (default false)").hasArg().build());
 
             CommandLineParser parser = new DefaultParser();
             try {
@@ -70,6 +84,8 @@ public class QueryComparator {
                 chunking = Integer.parseInt(line.getOptionValue("chunking", "100"));
 
                 repeat = Integer.parseInt(line.getOptionValue("repeat", "1"));
+
+                hide = Boolean.valueOf(line.getOptionValue("hide", "false"));
             } catch (ParseException exp) {
                 System.err.println("Parsing failed.  Reason: " + exp.getMessage());
             }
@@ -78,16 +94,18 @@ public class QueryComparator {
         InfluxDB influxDB = Utils.connectToInfluxDB(format);
 
 
-        String leftAlignFormat = "| %-35s | %-8d | %-9d |%n";
+        String leftAlignFormat = "     | %-35s | %-8d | %-9d |%n";
 
         System.out.println();
-        System.out.println("Query: " + statement);
-        System.out.println("Format: " + format);
-        System.out.println("Repeat: " + repeat);
+        if (!hide) {
+            System.out.println("Query: " + statement);
+            System.out.println("Format: " + format);
+            System.out.println("Repeat: " + repeat);
+        }
         System.out.println();
-        System.out.format("+-------------------------------------+----------+-----------+%n");
-        System.out.format("| Settings                            | Time ASC | Time DESC |%n");
-        System.out.format("+-------------------------------------+----------+-----------+%n");
+        System.out.format("     +-------------------------------------+----------+-----------+%n");
+        System.out.format("     | Settings                            | Time ASC | Time DESC |%n");
+        System.out.format("     +-------------------------------------+----------+-----------+%n");
 
         for (Integer limit : limits) {
 
@@ -103,18 +121,18 @@ public class QueryComparator {
                     } else {
                         CountDownLatch countDownLatch = new CountDownLatch(1);
 
-//            influxDB.query(query, chunking,
-//                    new java.util.function.BiConsumer<InfluxDB.Cancellable, QueryResult>() {
-//                        @Override
-//                        public void accept(InfluxDB.Cancellable cancellable, QueryResult queryResult) {
+//                        influxDB.query(query, chunking,
+//                                new java.util.function.BiConsumer<InfluxDB.Cancellable, QueryResult>() {
+//                                    @Override
+//                                    public void accept(InfluxDB.Cancellable cancellable, QueryResult queryResult) {
 //
-//                        }
-//                    }, new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            countDownLatch.countDown();
-//                        }
-//                    });
+//                                    }
+//                                }, new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        countDownLatch.countDown();
+//                                    }
+//                                });
 
                         influxDB.query(query, chunking,
                                 new java.util.function.Consumer<QueryResult>() {
@@ -134,7 +152,7 @@ public class QueryComparator {
             System.out.format(leftAlignFormat, String.format("[chunking = %s, limit = %s]", chunking, limit), elepsedTimes.get(0), elepsedTimes.get(1));
         }
 
-        System.out.format("+-------------------------------------+----------+-----------+%n");
+        System.out.format("     +-------------------------------------+----------+-----------+%n");
 
         influxDB.close();
         System.exit(0);

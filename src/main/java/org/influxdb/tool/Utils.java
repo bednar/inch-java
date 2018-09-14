@@ -97,9 +97,9 @@ public class Utils {
       Thread.sleep(100L);
     } while (!influxDBstarted);
     influxDB.setLogLevel(InfluxDB.LogLevel.NONE);
-    System.out.println("##################################################################################");
-    System.out.println("#  Connected to InfluxDB Version: " + influxDB.version() + " #");
-    System.out.println("##################################################################################");
+//    System.out.println("##################################################################################");
+    System.out.println("Connected to InfluxDB Version: " + influxDB.version());
+//    System.out.println("##################################################################################");
     return influxDB;
   }
 }
